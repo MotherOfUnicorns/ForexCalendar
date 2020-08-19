@@ -1,6 +1,6 @@
 import calendar
 import datetime as dt
-from collections import namedtuple
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import requests
@@ -21,21 +21,25 @@ MONTH_MAPPING: Dict[int, str] = {
     k: v.lower() for k, v in enumerate(calendar.month_abbr) if k != 0
 }
 
-WriteFields = namedtuple(
-    "WriteFields",
-    [
-        "date",
-        "time",
-        "currency",
-        "impact",
-        "event",
-        "actual",
-        "forecast",
-        "previous",
-        "state",
-    ],
-)
+
+@dataclass
+class WriteFields:
+
+    date: dt.date
+    time: dt.time
+    currency: str
+    impact: str
+    event: str
+    actual: str
+    forecast: str
+    previous: str
+    state: str
+
+
 # TODO timezone info
+# TODO set logger
+# TODO add unique event id (useful for updating future forecasts in db)
+# TODO add save to csv/json/database
 
 
 def _load_data_from_query(query_period: str) -> List[WriteFields]:
@@ -51,16 +55,21 @@ def _load_data_from_query(query_period: str) -> List[WriteFields]:
     trs = table.select("tr.calendar__row.calendar_row")
 
     results = []
-    current_year = query_period.split(".")[-1]
-    # TODO if the week/month spans two different years, this will not work
+    current_year = int(query_period.split(".")[-1])
     prev_date = None
     prev_time = None
     # when there are multiple events in a day, only the first entry will have date info
     for tr in trs:
         try:
             row = _parse_row(tr, current_year, prev_date, prev_time)
-            if row is None:
+            if row is None:  # end of table
                 continue
+
+            if (prev_date is not None) and (row.date < prev_date):
+                # the time period spans over two years
+                current_year += 1
+                row.date = row.date.replace(year=current_year)
+
             results.append(row)
             prev_date, prev_time = row.date, row.time
         except ValueError:
