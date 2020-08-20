@@ -1,5 +1,6 @@
 import calendar
 import datetime as dt
+import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -27,6 +28,7 @@ class WriteFields:
 
     date: dt.date
     time: dt.time
+    tz_offset: int
     currency: str
     impact: str
     event: str
@@ -37,7 +39,6 @@ class WriteFields:
     state: str
 
 
-# TODO timezone info
 # TODO set logger
 # TODO add save to csv/json/database
 
@@ -47,6 +48,13 @@ def _load_data_from_query(query_period: str) -> List[WriteFields]:
     r = requests.get(f"{BASE_URL}calendar?{query_period}")
     data = r.text
     soup = BeautifulSoup(data, "lxml")
+
+    tz_info = soup.select("section>div.calendar__print.calendar__print--header>div")
+    tz_info = tz_info[0].text  # <div>Calendar Time Zone: GMT -5 (DST On)</div>
+    tz, dst = re.findall(
+        "Calendar Time Zone: GMT (?P<tz>.\d) \(DST (?P<dst>.*)\)", tz_info
+    )[0]
+    tz_offset = int(tz) + (1 if dst == "On" else 0)
 
     # get and parse table data, ignoring details and graph
     table = soup.find("table", class_="calendar__table")
@@ -61,7 +69,7 @@ def _load_data_from_query(query_period: str) -> List[WriteFields]:
     # when there are multiple events in a day, only the first entry will have date info
     for tr in trs:
         try:
-            row = _parse_row(tr, current_year, prev_date, prev_time)
+            row = _parse_row(tr, current_year, tz_offset, prev_date, prev_time)
             if row is None:  # end of table
                 continue
 
@@ -75,11 +83,11 @@ def _load_data_from_query(query_period: str) -> List[WriteFields]:
         except ValueError:
             # TODO add logging here
             continue
-    return results
+    return results, soup
 
 
 def _parse_row(
-    tr, current_year, prev_date=None, prev_time=None
+    tr, current_year, tz_offset, prev_date=None, prev_time=None
 ) -> Optional[WriteFields]:
 
     if (not tr.select("td.calendar__cell.calendar__currency")[0].text.strip()) and (
@@ -143,7 +151,17 @@ def _parse_row(
             previous = data.text.strip()
 
     results = WriteFields(
-        date, time, currency, impact, event, eventid, actual, forecast, previous, state
+        date,
+        time,
+        tz_offset,
+        currency,
+        impact,
+        event,
+        eventid,
+        actual,
+        forecast,
+        previous,
+        state,
     )
     return results
 
