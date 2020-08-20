@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from forex_calendar.constants import BASE_URL, MONTH_MAPPING, READ_FIELDS, Event
 
 # TODO set logger
-# TODO add save to csv/json/database
+# TODO add license
 # TODO write tests
 
 
