@@ -30,6 +30,7 @@ class WriteFields:
     currency: str
     impact: str
     event: str
+    eventid: int
     actual: str
     forecast: str
     previous: str
@@ -38,7 +39,6 @@ class WriteFields:
 
 # TODO timezone info
 # TODO set logger
-# TODO add unique event id (useful for updating future forecasts in db)
 # TODO add save to csv/json/database
 
 
@@ -88,6 +88,8 @@ def _parse_row(
         # end of table
         return None
 
+    eventid = int(tr.attrs["data-eventid"])
+
     for field in READ_FIELDS:
         data = tr.select(f"td.calendar__cell.calendar__{field}.{field}")[0]
 
@@ -133,7 +135,7 @@ def _parse_row(
             elif "worse" in str(data):
                 state = "worse"
             else:
-                state = "None"
+                state = ""
 
         elif field == "forecast":
             forecast = data.text.strip()
@@ -141,7 +143,7 @@ def _parse_row(
             previous = data.text.strip()
 
     results = WriteFields(
-        date, time, currency, impact, event, actual, forecast, previous, state
+        date, time, currency, impact, event, eventid, actual, forecast, previous, state
     )
     return results
 
