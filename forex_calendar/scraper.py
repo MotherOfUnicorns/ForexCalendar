@@ -1,49 +1,18 @@
-import calendar
 import datetime as dt
 import re
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import requests
 from bs4 import BeautifulSoup
 
-BASE_URL = "https://www.forexfactory.com/"
-READ_FIELDS = [
-    "date",
-    "time",
-    "currency",
-    "impact",
-    "event",
-    "actual",
-    "forecast",
-    "previous",
-]
-MONTH_MAPPING: Dict[int, str] = {
-    k: v.lower() for k, v in enumerate(calendar.month_abbr) if k != 0
-}
-
-
-@dataclass
-class WriteFields:
-
-    date: dt.date
-    time: dt.time
-    tz_offset: int
-    currency: str
-    impact: str
-    event: str
-    eventid: int
-    actual: str
-    forecast: str
-    previous: str
-    state: str
-
+from forex_calendar.constants import BASE_URL, MONTH_MAPPING, READ_FIELDS, Event
 
 # TODO set logger
 # TODO add save to csv/json/database
+# TODO write tests
 
 
-def _load_data_from_query(query_period: str) -> List[WriteFields]:
+def _load_data_from_query(query_period: str) -> List[Event]:
     # get the page and make the soup
     r = requests.get(f"{BASE_URL}calendar?{query_period}")
     data = r.text
@@ -83,12 +52,12 @@ def _load_data_from_query(query_period: str) -> List[WriteFields]:
         except ValueError:
             # TODO add logging here
             continue
-    return results, soup
+    return results
 
 
 def _parse_row(
     tr, current_year, tz_offset, prev_date=None, prev_time=None
-) -> Optional[WriteFields]:
+) -> Optional[Event]:
 
     if (not tr.select("td.calendar__cell.calendar__currency")[0].text.strip()) and (
         not tr.select("td.calendar__cell.calendar__event")[0].text.strip()
@@ -150,7 +119,7 @@ def _parse_row(
         elif field == "previous":
             previous = data.text.strip()
 
-    results = WriteFields(
+    results = Event(
         date,
         time,
         tz_offset,
@@ -166,15 +135,15 @@ def _parse_row(
     return results
 
 
-def load_monthly_data(year: int, month: int) -> List[WriteFields]:
+def load_monthly_data(year: int, month: int) -> List[Event]:
     month_str = MONTH_MAPPING[month]
     return _load_data_from_query(f"month={month_str}.{year}")
 
 
-def load_weekly_data(date) -> List[WriteFields]:
+def load_weekly_data(date) -> List[Event]:
     # date of beginning of week (week starts on Sunday for ForexFactory)
     return _load_data_from_query(f"week={date:%b%d.%Y}")
 
 
-def load_daily_data(date) -> List[WriteFields]:
+def load_daily_data(date) -> List[Event]:
     return _load_data_from_query(f"day={date:%b%d.%Y}")
