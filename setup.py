@@ -12,4 +12,5 @@ setuptools.setup(
     # packages=setuptools.find_packages(),
     py_modules=["forex_calendar"],
     python_requires=">=3.6",
+    install_requires=["BeautifulSoup4", "requests", "lxml"],
 )
