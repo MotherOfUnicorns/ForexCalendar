@@ -5,7 +5,13 @@ from typing import List, Optional
 import requests
 from bs4 import BeautifulSoup
 
-from forex_calendar.constants import BASE_URL, MONTH_MAPPING, READ_FIELDS, Event
+from forex_calendar.constants import (
+    BASE_URL,
+    DATA_AVAILABLE_FROM,
+    MONTH_MAPPING,
+    READ_FIELDS,
+    Event,
+)
 
 # TODO set logger
 # TODO add license
@@ -136,14 +142,27 @@ def _parse_row(
 
 
 def load_monthly_data(year: int, month: int) -> List[Event]:
+    if dt.date(year, month, 1) < DATA_AVAILABLE_FROM:
+        raise ValueError(
+            f"No data available: earliest data is from {DATA_AVAILABLE_FROM:%Y-%m-%d}"
+        )
+
     month_str = MONTH_MAPPING[month]
     return _load_data_from_query(f"month={month_str}.{year}")
 
 
 def load_weekly_data(date) -> List[Event]:
+    if date < DATA_AVAILABLE_FROM:
+        raise ValueError(
+            f"No data available: earliest data is from {DATA_AVAILABLE_FROM:%Y-%m-%d}"
+        )
     # date of beginning of week (week starts on Sunday for ForexFactory)
     return _load_data_from_query(f"week={date:%b%d.%Y}")
 
 
 def load_daily_data(date) -> List[Event]:
+    if date < DATA_AVAILABLE_FROM:
+        raise ValueError(
+            f"No data available: earliest data is from {DATA_AVAILABLE_FROM:%Y-%m-%d}"
+        )
     return _load_data_from_query(f"day={date:%b%d.%Y}")
