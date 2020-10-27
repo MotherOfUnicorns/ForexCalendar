@@ -35,6 +35,7 @@ def _load_data_from_query(query_period: str, sleeptime: int = 5) -> List[Event]:
     browser.get(url)
     sleep(sleeptime)
     data = browser.page_source
+    browser.close()
 
     soup = BeautifulSoup(data, "lxml")
 
