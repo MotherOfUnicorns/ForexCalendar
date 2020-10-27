@@ -1,9 +1,11 @@
 import datetime as dt
 import re
+from time import sleep
 from typing import List, Optional
 
-import requests
 from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
 
 from forex_calendar.constants import (
     BASE_URL,
@@ -18,13 +20,25 @@ from forex_calendar.constants import (
 # TODO write tests
 
 
-def _load_data_from_query(query_period: str) -> List[Event]:
+def create_browser():
+    options = Options()
+    options.headless = True
+    browser = webdriver.Firefox(options=options)
+    return browser
+
+
+def _load_data_from_query(query_period: str, sleeptime: int = 5) -> List[Event]:
     # get the page and make the soup
-    r = requests.get(f"{BASE_URL}calendar?{query_period}")
-    data = r.text
+    url = f"{BASE_URL}calendar?{query_period}"
+
+    browser = create_browser()
+    browser.get(url)
+    sleep(sleeptime)
+    data = browser.page_source
+
     soup = BeautifulSoup(data, "lxml")
 
-    tz_info = soup.select("section>div.calendar__print.calendar__print--header>div")
+    tz_info = soup.select("div.calendar__print.calendar__print--header>div")
     tz_info = tz_info[0].text  # <div>Calendar Time Zone: GMT -5 (DST On)</div>
     tz, dst = re.findall(
         "Calendar Time Zone: GMT (?P<tz>.\d) \(DST (?P<dst>.*)\)", tz_info
