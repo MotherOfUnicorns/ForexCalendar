@@ -41,10 +41,13 @@ def _load_data_from_query(query_period: str, sleeptime: int = 5) -> List[Event]:
 
     tz_info = soup.select("div.calendar__print.calendar__print--header>div")
     tz_info = tz_info[0].text  # <div>Calendar Time Zone: GMT -5 (DST On)</div>
-    tz, dst = re.findall(
-        "Calendar Time Zone: GMT (?P<tz>.\d) \(DST (?P<dst>.*)\)", tz_info
-    )[0]
-    tz_offset = int(tz) + (1 if dst == "On" else 0)
+    # tz = re.findall("Calendar Time Zone: .* \(GMT (?P<tz>)\)", tz_info)[0]
+    tz = tz_info[-3:-1]
+    tz_offset = int(tz)
+    # tz, dst = re.findall(
+    #     "Calendar Time Zone: GMT (?P<tz>.\d) \(DST (?P<dst>.*)\)", tz_info
+    # )[0]
+    # tz_offset = int(tz) + (1 if dst == "On" else 0)
 
     # get and parse table data, ignoring details and graph
     table = soup.find("table", class_="calendar__table")
